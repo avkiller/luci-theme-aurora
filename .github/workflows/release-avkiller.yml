@@ -86,26 +86,64 @@ jobs:
             )
           fi
 
-          # 2. APK：显式调用当前目录下的 .tools/apk index
+          # 2. APK：一步生成并签名索引，随后校验
           if [ -d "$APK_DIR" ] && compgen -G "$APK_DIR/*.apk" > /dev/null; then
+            APK="$(pwd)/$APK_DIR/.tools/apk"
+            chmod +x "$APK" 2>/dev/null || true
+
+            # 2.1 私钥归一化为 SEC1（兼容 PKCS#8）
+            SIGN_KEY_FILE=""
+            if [ -s "$APK_KEY_FILE" ]; then
+              SIGN_KEY_FILE="$APK_KEY_FILE"
+              case "$(head -n1 "$SIGN_KEY_FILE")" in
+                *"BEGIN EC PRIVATE KEY"*) : ;;
+                *"BEGIN PRIVATE KEY"*)
+                  openssl ec -in "$SIGN_KEY_FILE" -out "$KEY_DIR/apk.sec1.pem"
+                  SIGN_KEY_FILE="$KEY_DIR/apk.sec1.pem" ;;
+                *) echo "::error::APK_KEY 不是 EC 私钥: $(head -n1 "$SIGN_KEY_FILE")"
+                   exit 1 ;;
+              esac
+            fi
+
+            # 2.2 公钥落到 keys-dir（优先用 APK_PUB_KEY，否则从私钥导出）
+            APK_KEYS_DIR="$KEY_DIR/apk-keys"
+            mkdir -p "$APK_KEYS_DIR"
+            if [ -n "${APK_PUB_KEY:-}" ]; then
+              printf '%s\n' "$APK_PUB_KEY" > "$APK_KEYS_DIR/homeproxy-custom.pem"
+            elif [ -n "$SIGN_KEY_FILE" ]; then
+              openssl pkey -in "$SIGN_KEY_FILE" -pubout \
+                -out "$APK_KEYS_DIR/homeproxy-custom.pem"
+            fi
+
+            # 2.3 生成索引；有密钥则同一步签名
             (
               cd "$APK_DIR"
-              chmod +x .tools/apk 2>/dev/null || true
-
-              ./.tools/apk index --allow-untrusted -o packages.adb ./*.apk
-
-              if [ -s "$APK_KEY_FILE" ]; then
-                if [ -x ".tools/abuild-sign" ]; then
-                  .tools/abuild-sign -k "$APK_KEY_FILE" packages.adb
-                elif command -v abuild-sign >/dev/null 2>&1; then
-                  abuild-sign -k "$APK_KEY_FILE" packages.adb
-                else
-                  ./.tools/apk adbsign --sign-key "$APK_KEY_FILE" packages.adb \
-                    || ./.tools/apk adbsign --key "$APK_KEY_FILE" packages.adb
-                fi
+              if [ -n "$SIGN_KEY_FILE" ]; then
+                "$APK" mkndx --allow-untrusted \
+                  --keys-dir "$APK_KEYS_DIR" \
+                  --sign "$SIGN_KEY_FILE" \
+                  -o packages.adb ./*.apk
+              else
+                "$APK" mkndx --allow-untrusted -o packages.adb ./*.apk
               fi
             )
+
+            # 2.4 校验：SIG 块 + 验签
+            if [ -n "$SIGN_KEY_FILE" ]; then
+              echo "--- adbdump sig ---"
+              "$APK" adbdump "$APK_DIR/packages.adb" \
+                | grep -i -A3 'sig' || echo "::warning::未见 SIG 块"
+
+              echo "--- verify ---"
+              if "$APK" --keys-dir "$APK_KEYS_DIR" verify "$APK_DIR/packages.adb"; then
+                echo "::notice::packages.adb 签名校验通过"
+              else
+                echo "::error::packages.adb 验签失败"
+                exit 1
+              fi
+            fi
           fi
+
 
       - name: Prepare Assets for  Release
         env:
