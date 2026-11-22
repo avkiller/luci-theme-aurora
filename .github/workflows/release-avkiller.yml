@@ -41,6 +41,66 @@ jobs:
           name: luci-theme-aurora-master-apk
           path: apk
 
+      - name: Index and sign IPK and APK feeds
+        shell: bash
+        env:
+          USIGN_KEY: ${{ secrets.USIGN_KEY }}
+          APK_KEY: ${{ secrets.APK_KEY }}
+        run: |
+          set -euo pipefail
+
+          TOOLS_DIR="$(pwd)/.tools"
+          chmod +x "$TOOLS_DIR"/* 2>/dev/null || true
+
+          SHIM_DIR="$(mktemp -d)"
+          KEY_DIR="$(mktemp -d)"
+          trap 'rm -rf "$SHIM_DIR" "$KEY_DIR"' EXIT
+
+          cat <<'EOF' > "$SHIM_DIR/sha256"
+          #!/usr/bin/env sh
+          [ "$1" = "sha256" ] && shift
+          sha256sum "$@" | awk '{print $1}'
+          EOF
+          chmod +x "$SHIM_DIR/sha256"
+
+          USIGN_KEY_FILE="$KEY_DIR/usign.key"
+          APK_KEY_FILE="$KEY_DIR/apk.key"
+          [ -n "${USIGN_KEY:-}" ] && printf '%s\n' "$USIGN_KEY" > "$USIGN_KEY_FILE"
+          [ -n "${APK_KEY:-}" ] && printf '%s\n' "$APK_KEY" > "$APK_KEY_FILE"
+
+          RUN_PATH="$SHIM_DIR:$TOOLS_DIR:$PATH"
+
+          # 1. 处理 IPK 索引与 usign 签名
+          if [ -d "ipk" ] && compgen -G "ipk/*.ipk" > /dev/null; then
+            (
+              cd ipk
+              PATH="$RUN_PATH" "$TOOLS_DIR/ipkg-make-index.sh" . > Packages
+              gzip -9c Packages > Packages.gz
+              if [ -s "$USIGN_KEY_FILE" ] && command -v usign >/dev/null 2>&1; then
+                usign -S -m Packages -s "$USIGN_KEY_FILE" -x Packages.sig
+              fi
+            )
+          fi
+
+          # 2. 处理 APK 索引与签名（带公钥目录校验）
+          if [ -d "apk" ] && compgen -G "apk/*.apk" > /dev/null; then
+            (
+              cd apk
+              APK_KEYS_ARG=""
+              if [ -d "$TOOLS_DIR/apk-keys" ]; then
+                APK_KEYS_ARG="--keys-dir $TOOLS_DIR/apk-keys"
+              fi
+              PATH="$RUN_PATH" apk index $APK_KEYS_ARG -o packages.adb ./*.apk
+              if [ -s "$APK_KEY_FILE" ]; then
+                if command -v abuild-sign >/dev/null 2>&1; then
+                  PATH="$RUN_PATH" abuild-sign -k "$APK_KEY_FILE" packages.adb
+                elif command -v apk >/dev/null 2>&1; then
+                  PATH="$RUN_PATH" apk adbsign --key "$APK_KEY_FILE" packages.adb
+                fi
+              fi
+            )
+          fi
+
       - name: Prepare Assets for  Release
         env:
           PKG_NAME: luci-theme-aurora
@@ -146,6 +206,7 @@ jobs:
           echo "最终生成的目录"
           ls -la .
       - name: Deploy to Cloudflare Pages
+        if: false
         uses: cloudflare/wrangler-action@v4.166.0
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
