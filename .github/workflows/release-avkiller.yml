@@ -1,0 +1,149 @@
+name: luci app EasyTier Release by fireworld
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Query workflow runs via API
+        run: |
+
+          CORE_FILE="build-theme-package-avkiller.yml"
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/$CORE_FILE/runs?status=success&per_page=1")
+          core_run_id=$(echo "$RESPONSE" | jq -r '.workflow_runs[].id')
+          echo "Core Previous successful run IDs: $core_run_id"
+          echo "CORE_ID=$core_run_id" >> $GITHUB_ENV
+
+      - name: Download Core Artifact aarch64
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          run_id: ${{ env.CORE_ID }}
+          repo: avkiller/luci-theme-aurora
+          name: luci-theme-aurora-master-ipk
+          path: ipk
+
+      - name: Download Core Artifact x86_64
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          run_id: ${{ env.CORE_ID }}
+          repo: avkiller/luci-theme-aurora
+          name: luci-theme-aurora-master-apk
+          path: apk
+
+      - name: Prepare Assets for HomeProxy Release
+        env:
+          PKG_NAME: homeproxy
+          PAGE_TITLE: HomeProxy Feed
+          LIST_HEADING: "📦 HomeProxy's Feed & 包下载列表"
+          ARCH_DIRS: "apk ipk"
+        run: |
+          set -e
+          mkdir -p dist/
+
+          # 1. 拷贝各架构目录
+          for arch in $ARCH_DIRS; do
+            if [ -d "$arch" ] && [ -n "$(ls -A "$arch" 2>/dev/null)" ]; then
+              cp -r "$arch" dist/
+              echo "✅ 已拷贝 $arch/ 到 dist/"
+            else
+              echo "⚠️ $arch/ 目录不存在或为空，跳过"
+            fi
+          done
+
+          echo "📂 dist/ 目录结构:"
+          ls -la dist/
+
+          # 2. 定义别名复制辅助函数（找到匹配文件才复制，避免报错中断）
+          copy_alias() {
+            local pattern="$1"
+            local dest="$2"
+            local desc="$3"
+            local matched
+            matched=$(ls $pattern 2>/dev/null | head -n1 || true)
+
+            if [ -n "$matched" ]; then
+              cp -v "$matched" "$dest"
+            else
+              echo "⚠️ 未找到 ${desc} (${pattern})，跳过创建副本"
+            fi
+          }
+
+          # 按需调整 实际生成的包名规则
+          copy_alias "dist/ipk/${PKG_NAME}_*.ipk" "dist/${PKG_NAME}_all.ipk" "ipk包"
+          copy_alias "dist/apk/${PKG_NAME}_*.apk" "dist/${PKG_NAME}_all.apk" "apk包"
+
+          # 3. 生成 index.html
+          cat <<EOF > dist/index.         
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+            <meta charset="utf-8">
+            <title>${PAGE_TITLE}</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; padding: 40px; background: #f4f5f7; color: #333; }
+              h1 { margin-bottom: 24px; }
+              .section { background: #fff; margin-bottom: 20px; padding: 16px 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+              .section-title { font-weight: bold; font-size: 16px; margin-bottom: 12px; }
+              ul { list-style: none; padding: 0; margin: 0; }
+              li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; gap: 16px; }
+              li:last-child { border-bottom: none; }
+              a { color: #2f80ed; text-decoration: none; font-weight: 600; font-family: monospace; word-break: break-all; }
+              a:hover { text-decoration: underline; }
+              .time { color: #777; font-size: 13px; font-family: monospace; white-space: nowrap; }
+            </style>
+          </head>
+          <body>
+           <h1>${LIST_HEADING}</h1>
+          EOF
+
+          while IFS= read -r dir; do
+            rel_dir="${dir#dist/}"
+            if [ "$rel_dir" = "." ] || [ -z "$rel_dir" ]; then
+              section_title="📂 根目录"
+            else
+              section_title="📂 $rel_dir"
+            fi
+
+            {
+              echo "  <div class=\"section\">"
+              echo "    <div class=\"section-title\">${section_title}</div>"
+              echo "    <ul>"
+            } >> dist/index.html
+
+            while IFS= read -r file; do
+              [ -n "$file" ] || continue
+              filename=$(basename "$file")
+              mtime=$(date -r "$file" '+%Y.%m.%d %H:%M:%S' 2>/dev/null || date '+%Y.%m.%d %H:%M:%S')
+              rel_path="${file#dist/}"
+
+              echo "      <li><a href=\"./${rel_path}\">${filename}</a> <span class=\"time\">[${mtime}]</span></li>" >> dist/index.html
+            done < <(find "$dir" -maxdepth 1 -type f ! -name "index.html" | sort)
+
+            {
+              echo "    </ul>"
+              echo "  </div>"
+            } >> dist/index.html
+          done < <(find dist/ -type f ! -name "index.html" -printf "%h\n" | sort -u)
+
+          echo "</body></html>" >> dist/index.html
+          echo "✅ dist/index.html 生成完成"
+          # 显示最终文件
+          ls -la dist/
+      - name: Deploy to Cloudflare Pages
+        if: false
+        uses: cloudflare/wrangler-action@v4.0.0
+        with:
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy dist --project-name=aurora
