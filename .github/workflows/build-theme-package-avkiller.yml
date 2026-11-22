@@ -35,7 +35,9 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: luci-theme-aurora-${{ steps.slug.outputs.ref }}-${{ steps.build.outputs.pkg_type }}
-          path: out/*.[ai]pk
+          path: |
+            out/*.[ai]pk
+            out/.tools/**
       - uses: avkiller/build-luci-package/release@v2
         with:
           name: luci-theme-aurora
