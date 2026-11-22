@@ -108,7 +108,7 @@ jobs:
           EOF
           cd dist || exit 1
           while IFS= read -r dir; do
-            rel_dir="${dir#dist/}"
+            rel_dir="${dir#.}"
             if [ "$rel_dir" = "." ] || [ -z "$rel_dir" ]; then
               section_title="📂 根目录"
             else
@@ -119,15 +119,15 @@ jobs:
               echo "  <div class=\"section\">"
               echo "    <div class=\"section-title\">${section_title}</div>"
               echo "    <ul>"
-            } >> dist/index.html
+            } >> index.html
 
             while IFS= read -r file; do
               [ -n "$file" ] || continue
               filename=$(basename "$file")
               mtime=$(date -r "$file" '+%Y.%m.%d %H:%M:%S' 2>/dev/null || date '+%Y.%m.%d %H:%M:%S')
-              rel_path="${file#dist/}"
+              rel_path="${file#.}"
 
-              echo "      <li><a href=\"./${rel_path}\">${filename}</a> <span class=\"time\">[${mtime}]</span></li>" >> dist/index.html
+              echo "      <li><a href=\"./${rel_path}\">${filename}</a> <span class=\"time\">[${mtime}]</span></li>" >> index.html
             done < <(find "$dir" -maxdepth 1 -type f ! -name "index.html" | sort)
 
             {
@@ -141,9 +141,9 @@ jobs:
           # 显示index文件
           cat index.html
           # 显示最终目录
-          ls -la dist/
+          ls -la .
       - name: Deploy to Cloudflare Pages
-        if: false
+        working-directory: ${{ github.workspace }}
         uses: cloudflare/wrangler-action@v4.0.0
         with:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
