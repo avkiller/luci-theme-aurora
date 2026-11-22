@@ -138,7 +138,9 @@ jobs:
 
           echo "</body></html>" >> dist/index.html
           echo "✅ dist/index.html 生成完成"
-          # 显示最终文件
+          # 显示index文件
+          cat dist/index.html
+          # 显示最终目录
           ls -la dist/
       - name: Deploy to Cloudflare Pages
         if: false
