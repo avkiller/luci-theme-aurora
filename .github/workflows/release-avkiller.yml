@@ -86,28 +86,22 @@ jobs:
             )
           fi
 
-          # 2. APK：使用 apk/.tools
+          # 2. APK：显式调用当前目录下的 .tools/apk index
           if [ -d "$APK_DIR" ] && compgen -G "$APK_DIR/*.apk" > /dev/null; then
             (
               cd "$APK_DIR"
-              [ -d ".tools" ] && chmod +x .tools/* 2>/dev/null || true
-              APK_PATH="$SHIM_DIR:$(pwd)/.tools:$PATH"
+              chmod +x .tools/apk 2>/dev/null || true
 
-              APK_KEYS_ARG=""
-              for kdir in ".tools/apk-keys" ".tools/keys" ".tools"; do
-                if [ -d "$kdir" ] && compgen -G "$kdir/*.pub" > /dev/null 2>&1; then
-                  APK_KEYS_ARG="--keys-dir $kdir"
-                  break
-                fi
-              done
-
-              PATH="$APK_PATH" apk index --allow-untruste $APK_KEYS_ARG -o packages.adb ./*.apk
+              ./.tools/apk index --allow-untrusted -o packages.adb ./*.apk
 
               if [ -s "$APK_KEY_FILE" ]; then
-                if [ -x ".tools/abuild-sign" ] || command -v abuild-sign >/dev/null 2>&1; then
-                  PATH="$APK_PATH" abuild-sign -k "$APK_KEY_FILE" packages.adb
+                if [ -x ".tools/abuild-sign" ]; then
+                  .tools/abuild-sign -k "$APK_KEY_FILE" packages.adb
+                elif command -v abuild-sign >/dev/null 2>&1; then
+                  abuild-sign -k "$APK_KEY_FILE" packages.adb
                 else
-                  PATH="$APK_PATH" apk adbsign --key "$APK_KEY_FILE" packages.adb
+                  ./.tools/apk adbsign --sign-key "$APK_KEY_FILE" packages.adb \
+                    || ./.tools/apk adbsign --key "$APK_KEY_FILE" packages.adb
                 fi
               fi
             )
