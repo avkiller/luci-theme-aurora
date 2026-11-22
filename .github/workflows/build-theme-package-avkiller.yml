@@ -1,4 +1,4 @@
-name: LuCI Theme Aurora Build & Release for avkiller
+name: LuCI Theme Aurora Build for avkiller
 
 on:
   workflow_dispatch:
