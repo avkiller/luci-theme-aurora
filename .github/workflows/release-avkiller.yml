@@ -88,8 +88,9 @@ jobs:
 
           # 2. APK：一步生成并签名索引，随后校验
           if [ -d "$APK_DIR" ] && compgen -G "$APK_DIR/*.apk" > /dev/null; then
-            APK="$(pwd)/$APK_DIR/.tools/apk"
+            APK="$APK_DIR/.tools/apk"
             chmod +x "$APK" 2>/dev/null || true
+
 
             # 2.1 私钥归一化为 SEC1（兼容 PKCS#8）
             SIGN_KEY_FILE=""
