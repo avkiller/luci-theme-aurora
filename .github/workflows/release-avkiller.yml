@@ -44,8 +44,8 @@ jobs:
       - name: Index and sign IPK and APK feeds
         shell: bash
         env:
-          USIGN_KEY: ${{ secrets.USIGN_KEY }}
-          APK_KEY: ${{ secrets.APK_KEY }}
+          USIGN_KEY: ${{ secrets.USIGN_PRIVATE_KEY }}
+          APK_KEY: ${{ secrets.APK_PRIVATE_KEY }}
           APK_PUB_KEY: ${{ secrets.APK_PUB_KEY }}
         run: |
           set -euo pipefail
