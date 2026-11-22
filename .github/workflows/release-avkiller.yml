@@ -80,11 +80,11 @@ jobs:
           }
 
           # 按需调整 实际生成的包名规则
-          copy_alias "dist/ipk/${PKG_NAME}_*.ipk" "dist/${PKG_NAME}_all.ipk" "ipk包"
-          copy_alias "dist/apk/${PKG_NAME}_*.apk" "dist/${PKG_NAME}_all.apk" "apk包"
+          copy_alias "dist/ipk/${PKG_NAME}[_-]*.ipk" "dist/${PKG_NAME}_all.ipk" "ipk包"
+          copy_alias "dist/apk/${PKG_NAME}[_-]*.apk" "dist/${PKG_NAME}_all.apk" "apk包"
 
           # 3. 生成 index.html
-          cat <<EOF > dist/index.         
+          cat <<EOF > dist/index.html        
           <!DOCTYPE html>
           <html lang="zh-CN">
           <head>
@@ -106,7 +106,7 @@ jobs:
           <body>
            <h1>${LIST_HEADING}</h1>
           EOF
-
+          cd dist || exit 1
           while IFS= read -r dir; do
             rel_dir="${dir#dist/}"
             if [ "$rel_dir" = "." ] || [ -z "$rel_dir" ]; then
