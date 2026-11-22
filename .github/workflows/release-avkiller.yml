@@ -236,7 +236,8 @@ jobs:
 
               echo "      <li><a href=\"./${rel_path}\">${filename}</a> <span class=\"time\">[${mtime}]</span></li>" >> index.html
             # done < <(find "$dir" -maxdepth 1 -type f ! -name "index.html" | sort)
-            done < <(find "$dir" -maxdepth 1 -type f -path "*/.tools/*" -prune -o ! -name "index.html" -print | sort)
+            done < <(find "$dir" -maxdepth 1 \( -name ".tools" -prune \) -o -type f ! -name "index.html" -print | sort)
+
 
 
             {
@@ -244,7 +245,7 @@ jobs:
               echo "  </div>"
             } >> index.html
 
-          done < <(find . -type f -path "*/.tools/*" -prune -o ! -name "index.html" -printf "%h\n" | sort -u)
+          done < <(find . -type d \( -name ".tools" -o -name ".git" \) -prune -o -type f ! -name "index.html" -printf "%h\n" | sort -u)
           # done < <(find . -type f ! -name "index.html" -printf "%h\n" | sort -u)
 
           echo "</body></html>" >> index.html
