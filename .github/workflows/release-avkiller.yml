@@ -1,4 +1,4 @@
-name: luci app EasyTier Release by fireworld
+name: luci-theme-aurora Release by fireworld
 
 on:
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
           echo "Core Previous successful run IDs: $core_run_id"
           echo "CORE_ID=$core_run_id" >> $GITHUB_ENV
 
-      - name: Download Core Artifact aarch64
+      - name: Download Core Artifact ipk
         uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
@@ -32,7 +32,7 @@ jobs:
           name: luci-theme-aurora-master-ipk
           path: ipk
 
-      - name: Download Core Artifact x86_64
+      - name: Download Core Artifact apk
         uses: dawidd6/action-download-artifact@v21
         with:
           github_token: ${{secrets.GITHUB_TOKEN}}
@@ -41,11 +41,11 @@ jobs:
           name: luci-theme-aurora-master-apk
           path: apk
 
-      - name: Prepare Assets for HomeProxy Release
+      - name: Prepare Assets for  Release
         env:
-          PKG_NAME: homeproxy
-          PAGE_TITLE: HomeProxy Feed
-          LIST_HEADING: "📦 HomeProxy's Feed & 包下载列表"
+          PKG_NAME: luci-theme-aurora
+          PAGE_TITLE: luci-theme-aurora Feed
+          LIST_HEADING: "📦 Aurora's Feed & 包下载列表"
           ARCH_DIRS: "apk ipk"
         run: |
           set -e
