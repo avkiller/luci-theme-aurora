@@ -231,16 +231,21 @@ jobs:
               [ -n "$file" ] || continue
               filename=$(basename "$file")
               mtime=$(date -r "$file" '+%Y.%m.%d %H:%M:%S' 2>/dev/null || date '+%Y.%m.%d %H:%M:%S')
-              rel_path="${file#.}"
+              # rel_path="${file#.}"
+              rel_path="${file#./}"
 
               echo "      <li><a href=\"./${rel_path}\">${filename}</a> <span class=\"time\">[${mtime}]</span></li>" >> index.html
-            done < <(find "$dir" -maxdepth 1 -type f ! -name "index.html" | sort)
+            # done < <(find "$dir" -maxdepth 1 -type f ! -name "index.html" | sort)
+            done < <(find "$dir" -maxdepth 1 -type f -path "*/.tools/*" -prune -o ! -name "index.html" -print | sort)
+
 
             {
               echo "    </ul>"
               echo "  </div>"
             } >> index.html
-          done < <(find . -type f ! -name "index.html" -printf "%h\n" | sort -u)
+
+          done < <(find . -type f -path "*/.tools/*" -prune -o ! -name "index.html" -printf "%h\n" | sort -u)
+          # done < <(find . -type f ! -name "index.html" -printf "%h\n" | sort -u)
 
           echo "</body></html>" >> index.html
           echo "✅ index.html 生成完成"
