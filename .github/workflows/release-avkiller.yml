@@ -133,13 +133,13 @@ jobs:
             {
               echo "    </ul>"
               echo "  </div>"
-            } >> dist/index.html
-          done < <(find dist/ -type f ! -name "index.html" -printf "%h\n" | sort -u)
+            } >> index.html
+          done < <(find d. -type f ! -name "index.html" -printf "%h\n" | sort -u)
 
-          echo "</body></html>" >> dist/index.html
-          echo "✅ dist/index.html 生成完成"
+          echo "</body></html>" >> index.html
+          echo "✅ index.html 生成完成"
           # 显示index文件
-          cat dist/index.html
+          cat index.html
           # 显示最终目录
           ls -la dist/
       - name: Deploy to Cloudflare Pages
