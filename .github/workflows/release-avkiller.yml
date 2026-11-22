@@ -106,9 +106,10 @@ jobs:
           <body>
             <h1>${LIST_HEADING}</h1>
           EOF
+          echo " 进入dist目录开始操作"
           cd dist || exit 1
           while IFS= read -r dir; do
-            rel_dir="${dir#.}"
+            rel_dir="${dir#./}"
             if [ "$rel_dir" = "." ] || [ -z "$rel_dir" ]; then
               section_title="📂 根目录"
             else
@@ -134,13 +135,15 @@ jobs:
               echo "    </ul>"
               echo "  </div>"
             } >> index.html
-          done < <(find d. -type f ! -name "index.html" -printf "%h\n" | sort -u)
+          done < <(find . -type f ! -name "index.html" -printf "%h\n" | sort -u)
 
           echo "</body></html>" >> index.html
           echo "✅ index.html 生成完成"
+          echo "最终生成的目录"
           # 显示index文件
           cat index.html
           # 显示最终目录
+          echo "最终生成的目录"
           ls -la .
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4.0.0
@@ -148,4 +151,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           command: pages deploy dist --project-name=aurora
-          working-directory: ${{ github.workspace }}
