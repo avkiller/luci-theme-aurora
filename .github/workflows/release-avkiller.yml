@@ -84,7 +84,7 @@ jobs:
           copy_alias "dist/apk/${PKG_NAME}[_-]*.apk" "dist/${PKG_NAME}_all.apk" "apk包"
 
           # 3. 生成 index.html
-          cat <<EOF > dist/index.html        
+          cat <<EOF > dist/index.html
           <!DOCTYPE html>
           <html lang="zh-CN">
           <head>
@@ -104,7 +104,7 @@ jobs:
             </style>
           </head>
           <body>
-           <h1>${LIST_HEADING}</h1>
+            <h1>${LIST_HEADING}</h1>
           EOF
           cd dist || exit 1
           while IFS= read -r dir; do
