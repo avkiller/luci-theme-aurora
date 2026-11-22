@@ -46,6 +46,7 @@ jobs:
         env:
           USIGN_KEY: ${{ secrets.USIGN_KEY }}
           APK_KEY: ${{ secrets.APK_KEY }}
+          APK_PUB_KEY: ${{ secrets.APK_PUB_KEY }}
         run: |
           set -euo pipefail
 
@@ -100,7 +101,7 @@ jobs:
                 fi
               done
 
-              PATH="$APK_PATH" apk index $APK_KEYS_ARG -o packages.adb ./*.apk
+              PATH="$APK_PATH" apk index --allow-untruste $APK_KEYS_ARG -o packages.adb ./*.apk
 
               if [ -s "$APK_KEY_FILE" ]; then
                 if [ -x ".tools/abuild-sign" ] || command -v abuild-sign >/dev/null 2>&1; then
