@@ -82,6 +82,11 @@ jobs:
 
               if [ -s "$USIGN_KEY_FILE" ]; then
                 PATH="$IPK_PATH" usign -S -m Packages -s "$USIGN_KEY_FILE" -x Packages.sig
+                [ -s Packages.sig ] \
+                  && echo "::notice::Packages.sig 已生成" \
+                  || { echo "::error::Packages.sig 生成失败"; exit 1; }
+              else
+                echo "::warning::USIGN_KEY 为空，跳过 Packages.sig（用户需 --force-signature 或关闭 check_signature）"
               fi
             )
           fi
