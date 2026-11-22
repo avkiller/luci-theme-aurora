@@ -178,7 +178,9 @@ jobs:
       - name: Prepare Assets for  Release
         env:
           PKG_NAME: luci-theme-aurora
-          PAGE_TITLE: luci-theme-aurora Feed
+          PKG_CFG_NAME: luci-app-aurora-config
+          PKG_i18n_NAME: luci-i18n-aurora-config
+          PAGE_TITLE: luci-theme-aurora and ConfigFeed
           LIST_HEADING: "📦 Aurora's Feed & 包下载列表"
           ARCH_DIRS: "apk ipk"
         run: |
@@ -216,6 +218,12 @@ jobs:
           # 按需调整 实际生成的包名规则
           copy_alias "dist/ipk/${PKG_NAME}[_-]*.ipk" "dist/${PKG_NAME}_all.ipk" "ipk包"
           copy_alias "dist/apk/${PKG_NAME}[_-]*.apk" "dist/${PKG_NAME}_all.apk" "apk包"
+
+          copy_alias "dist/ipk/${PKG_CFG_NAME}[_-]*.ipk" "dist/${PKG_CFG_NAME}_all.ipk" "ipk包"
+          copy_alias "dist/apk/${PKG_CFG_NAME}[_-]*.apk" "dist/${PKG_CFG_NAME}_all.apk" "apk包"
+
+          copy_alias "dist/ipk/${PKG_i18n_NAME}-zh-cn[_-]*.ipk" "dist/${PKG_i18n_NAME}_zh.ipk" "ipk包"
+          copy_alias "dist/apk/${PKG_i18n_NAME}-zh-cn[_-]*.apk" "dist/${PKG_i18n_NAME}_zh.apk" "apk包"
 
           # 3. 生成 index.html
           cat <<EOF > dist/index.html
