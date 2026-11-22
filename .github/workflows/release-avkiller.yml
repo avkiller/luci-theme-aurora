@@ -23,6 +23,13 @@ jobs:
           echo "Core Previous successful run IDs: $core_run_id"
           echo "CORE_ID=$core_run_id" >> $GITHUB_ENV
 
+          CONFIG_FILE="build-aurora-config.yml"
+          RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/avkiller/luci-app-aurora-config/actions/workflows/$CONFIG_FILE/runs?status=success&per_page=1")
+          config_run_id=$(echo "$RESPONSE" | jq -r '.workflow_runs[].id')
+          echo "Core Previous successful run IDs: $config_run_id"
+          echo "CONFIG_ID=$config_run_id" >> $GITHUB_ENV
+
       - name: Download Core Artifact ipk
         uses: dawidd6/action-download-artifact@v21
         with:
@@ -30,6 +37,14 @@ jobs:
           run_id: ${{ env.CORE_ID }}
           repo: avkiller/luci-theme-aurora
           name: luci-theme-aurora-master-ipk
+          path: ipk
+      - name: Download Config Artifact ipk
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          run_id: ${{ env.CONFIG_ID }}
+          repo: avkiller/luci-app-aurora-config
+          name: luci-app-aurora-config-master-ipk
           path: ipk
 
       - name: Download Core Artifact apk
@@ -39,6 +54,15 @@ jobs:
           run_id: ${{ env.CORE_ID }}
           repo: avkiller/luci-theme-aurora
           name: luci-theme-aurora-master-apk
+          path: apk
+          
+      - name: Download config Artifact apk
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          run_id: ${{ env.CONFIG_ID }}
+          repo: avkiller/luci-app-aurora-config
+          name: luci-app-aurora-config-master-apk
           path: apk
 
       - name: Index and sign IPK and APK feeds
