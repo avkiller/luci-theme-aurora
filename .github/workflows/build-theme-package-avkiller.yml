@@ -29,15 +29,33 @@ jobs:
         with:
           sdk: ${{ matrix.sdk }}
           packages: '[{"pkg":"luci-theme-aurora","path":"."}]'
+          feed_name: "avkiller"
         env:
           USIGN_KEY: ${{ secrets.USIGN_PRIVATE_KEY }}
           APK_KEY: ${{ secrets.APK_PRIVATE_KEY }}
+
+      - name: Inspect out directory
+        shell: bash
+        run: |
+          echo "显示当前目录"
+          ls -la
+          echo "显示out目录文件"
+          OUT_DIR="out"   # 若你的工作目录是 $WORK/out，改成对应路径即可
+          echo "=== Inspecting $OUT_DIR ==="
+          if [ -d "$OUT_DIR" ]; then
+            count=$(find "$OUT_DIR" -type f | wc -l)
+            echo "File count: $count"
+            find "$OUT_DIR" -maxdepth 3 -ls
+          else
+            echo "Directory not found: $OUT_DIR"
+          fi
       - uses: actions/upload-artifact@v6
         with:
           name: luci-theme-aurora-${{ steps.slug.outputs.ref }}-${{ steps.build.outputs.pkg_type }}
           path: |
             out/*.[ai]pk
             out/.tools/**
+          include-hidden-files: true
       - uses: avkiller/build-luci-package/release@v2
         with:
           name: luci-theme-aurora
